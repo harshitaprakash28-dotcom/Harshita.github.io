@@ -1,6 +1,21 @@
 <h2 class="sr-only">Interactive tokenization fable — type any word or phrase and see how three AI scribes would split it into tokens differently</h2>
 
 <style>
+  :root {
+    --font-sans: Inter, Arial, Helvetica, sans-serif;
+    --font-serif: Georgia, 'Times New Roman', serif;
+    --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    --color-text-primary: #111827;
+    --color-text-secondary: #4b5563;
+    --color-text-tertiary: #6b7280;
+    --color-background-primary: #ffffff;
+    --color-background-secondary: #f9fafb;
+    --color-border-secondary: #d1d5db;
+    --color-border-tertiary: #e5e7eb;
+    --border-radius-lg: 14px;
+    --border-radius-md: 10px;
+  }
+
   .fable-wrap { padding: 1.5rem 0; font-family: var(--font-sans); }
   .fable-title { font-family: var(--font-serif); font-size: 18px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; }
   .fable-sub { font-size: 14px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
@@ -49,24 +64,18 @@ const SCRIBES = [
     name: 'First scribe',
     trait: 'trained on code & prose',
     color: { bg: '#E6F1FB', border: '#185FA5', text: '#0C447C', avatarBg: '#B5D4F4', avatarText: '#0C447C' },
-    rules: [
-      { pat: /^(tion|ation|ization|ise|ize|ed|ing|er|est|ly|ness|ment|ful|less|able|ible|ous|ive|al|ic|ity|ary|ory|ery|un|re|pre|dis|mis|non|over|under|out|up|down|in|im|ir|il)$/, merge: false },
-      { split: 'suffix', suffixes: ['tion','ation','ization','ise','ize','ness','ment','ful','less','able','ible','ous','ive','ity','ary','ory','ing','ed','er','ly','al','ic'] }
-    ],
     tokenize: greedySplit
   },
   {
     name: 'Second scribe',
     trait: 'trained mostly on prose',
     color: { bg: '#FAEEDA', border: '#854F0B', text: '#633806', avatarBg: '#FAC775', avatarText: '#633806' },
-    rules: [],
     tokenize: proseSplit
   },
   {
     name: 'Third scribe',
     trait: 'finest granularity',
     color: { bg: '#EAF3DE', border: '#3B6D11', text: '#27500A', avatarBg: '#C0DD97', avatarText: '#27500A' },
-    rules: [],
     tokenize: fineSplit
   }
 ];
@@ -77,15 +86,17 @@ function hashStr(s) {
   return (h % 49000) + 1000;
 }
 
-const SUFFIXES = ['ization','isation','ation','ition','tion','sion','ness','ment','ful','less','able','ible','ously','ious','ous','ive','ity','ary','ory','ery','ing','edly','edly','ed','er','est','ly','al','ic','ism','ist','ize','ise'];
+const SUFFIXES = ['ization','isation','ation','ition','tion','sion','ness','ment','ful','less','able','ible','ously','ious','ous','ive','ity','ary','ory','ery','ing','edly','ed','er','est','ly','al','ic','ism','ist','ize','ise'];
 const PREFIXES = ['un','re','pre','dis','mis','non','over','under','out','inter','intra','extra','anti','auto','bi','co','de','ex','in','im','ir','il','trans','sub','super','semi'];
 
 function greedySplit(word) {
   const w = word.toLowerCase();
   const tokens = [];
   let i = 0;
+
   while (i < w.length) {
     let matched = false;
+
     for (const sfx of SUFFIXES) {
       if (w.endsWith(sfx) && i === w.length - sfx.length && sfx.length < w.length - i) {
         tokens.push(word.slice(i, w.length - sfx.length));
@@ -95,6 +106,7 @@ function greedySplit(word) {
         break;
       }
     }
+
     if (!matched) {
       for (const pfx of PREFIXES) {
         if (w.startsWith(pfx, i) && i + pfx.length < w.length) {
@@ -105,23 +117,27 @@ function greedySplit(word) {
         }
       }
     }
+
     if (!matched) {
-      const remaining = word.slice(i);
-      tokens.push(remaining);
+      tokens.push(word.slice(i));
       i = w.length;
     }
   }
+
   return tokens.filter(t => t.length > 0);
 }
 
 function proseSplit(word) {
   const w = word.toLowerCase();
+
   for (const sfx of ['ization','isation','ation','ition','tion','ness','ment','able','ible','ously','ious','ous']) {
     if (w.endsWith(sfx) && w.length > sfx.length + 2) {
       return [word.slice(0, w.length - sfx.length), word.slice(w.length - sfx.length)];
     }
   }
+
   if (w.length <= 6) return [word];
+
   const mid = Math.ceil(w.length * 0.55);
   return [word.slice(0, mid), word.slice(mid)];
 }
@@ -130,9 +146,11 @@ function fineSplit(word) {
   const w = word.toLowerCase();
   const tokens = [];
   let i = 0;
+
   while (i < w.length) {
     let matched = false;
     const pfxList = ['tion','ation','ization','ness','ment','ing','ed','er','est','ly','al','ic','un','re','pre','dis','mis','non','ize','ise','ous','ive','ity','ary','ory','ion','iz','at','or','er','an','en','in','on','un'];
+
     for (const p of pfxList) {
       if (w.startsWith(p, i) && i + p.length <= w.length) {
         tokens.push(word.slice(i, i + p.length));
@@ -141,24 +159,28 @@ function fineSplit(word) {
         break;
       }
     }
+
     if (!matched) {
       const chunkLen = Math.min(2, w.length - i);
       tokens.push(word.slice(i, i + chunkLen));
       i += chunkLen;
     }
   }
+
   return tokens.filter(t => t.length > 0);
 }
 
 function wordTokens(scribeIdx, fullText) {
   const words = fullText.trim().split(/\s+/);
   const result = [];
+
   words.forEach((word, wi) => {
     if (!word) return;
     const chunks = SCRIBES[scribeIdx].tokenize(word);
     chunks.forEach(c => result.push(c));
     if (wi < words.length - 1) result.push(' ');
   });
+
   return result.filter(t => t.trim().length > 0 || t === ' ').filter(t => t !== ' ');
 }
 
@@ -211,15 +233,21 @@ function updateMoral(word, counts) {
   const [a, b, c] = counts;
   const diff = Math.max(...counts) - Math.min(...counts);
   let moral = '';
+
   if (diff === 0) {
-    moral = `All three scribes agreed on "${word}" — ${a} token${a!==1?'s':''}. Some words are so common that every kingdom has memorised them whole.`;
+    moral = `All three scribes agreed on "${word}" — ${a} token${a !== 1 ? 's' : ''}. Some words are so common that every kingdom has memorised them whole.`;
   } else {
-    moral = `The same word "${word}" cost the first scribe ${a} token${a!==1?'s':''}, the second ${b}, the third ${c}. The kingdoms do not share a dictionary — and so the same message carries a different price in each.`;
+    moral = `The same word "${word}" cost the first scribe ${a} token${a !== 1 ? 's' : ''}, the second ${b}, the third ${c}. The kingdoms do not share a dictionary — and so the same message carries a different price in each.`;
   }
+
   document.getElementById('moral-text').textContent = moral;
 }
 
-document.getElementById('word-input').addEventListener('keydown', e => { if (e.key === 'Enter') tokenize(); });
+document.getElementById('word-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') tokenize();
+});
+
 document.getElementById('word-input').addEventListener('input', tokenize);
+
 tokenize();
 </script>
